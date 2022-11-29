@@ -1,5 +1,7 @@
 # httpretry
 
+[![Go](https://github.com/ladydascalie/go-httpretry/actions/workflows/go.yml/badge.svg)](https://github.com/ladydascalie/go-httpretry/actions/workflows/go.yml)
+
 An http client with support for retry policies and functional options.
 
 ## Install
