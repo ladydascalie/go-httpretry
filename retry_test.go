@@ -242,6 +242,48 @@ func TestStatusChecker(t *testing.T) {
 		}
 	})
 
+	t.Run("4xx responses are not retried", func(t *testing.T) {
+		statuses := []int{
+			http.StatusBadRequest,
+			http.StatusUnauthorized,
+			http.StatusForbidden,
+			http.StatusNotFound,
+			http.StatusMethodNotAllowed,
+			http.StatusConflict,
+			http.StatusGone,
+			http.StatusUnprocessableEntity,
+		}
+		for _, code := range statuses {
+			code := code
+			t.Run(http.StatusText(code), func(t *testing.T) {
+				var tries int
+				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					tries++
+					w.WriteHeader(code)
+				}))
+				defer ts.Close()
+
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				resp, err := client.Do(req)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				resp.Body.Close()
+
+				if tries != 1 {
+					t.Fatalf("expected 1 attempt, got %d", tries)
+				}
+			})
+		}
+	})
+
 	t.Run("retry-after header request is honoured", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Retry-After", "1") // retry after 1 second
