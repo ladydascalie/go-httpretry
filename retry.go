@@ -144,25 +144,27 @@ type RetryTransport struct {
 // If no policy is given, the default policy is used.
 // default policy: RetryPolicy{Retries: 3, WaitTime: 1 * time.Second, BackoffMode: BackoffModeExponential}
 func NewRetryTransport(policy *RetryPolicy) *RetryTransport {
-	defaultPolicy := &RetryPolicy{
-		Retries:     3,
-		WaitTime:    500 * time.Millisecond,
-		BackoffMode: BackoffModeExponential,
-	}
+	defaultPolicy := NewDefaultRetryPolicy()
 
-	// only if no policy is given.
+	// if no policy is given, use the default policy.
 	if policy == nil {
-		policy = defaultPolicy
+		return &RetryTransport{
+			RoundTripper: http.DefaultTransport,
+			Policy:       defaultPolicy,
+			Logger:       defaultLogger,
+		}
 	}
 
-	// setup transport with some defaults
-	transport := &RetryTransport{
+	// if there is no response check set it should default to the default policy's response check.
+	if policy.ResponseCheck == nil {
+		policy.ResponseCheck = defaultPolicy.ResponseCheck
+	}
+
+	return &RetryTransport{
 		RoundTripper: http.DefaultTransport,
 		Policy:       policy,
 		Logger:       defaultLogger,
 	}
-
-	return transport
 }
 
 // RequestError is returned when the maximum number of retries is exceeded.
